@@ -1,0 +1,166 @@
+select *
+From PortfolioProject.dbo.CovidDeaths
+Where continent is not null
+Order by 3,4
+
+-- Removing unwanted data from Tables
+Select *
+FROM PortfolioProject.dbo.CovidDeaths
+Where Location like '%income%'
+
+Select *
+FROM PortfolioProject.dbo.CovidVaccinations
+Where Location like '%income%'
+
+-- Delete Following Checks
+Delete FROM PortfolioProject.dbo.CovidDeaths
+Where Location like '%income%'
+
+Delete FROM PortfolioProject.dbo.CovidVaccinations
+Where Location like '%income%'
+
+
+
+--Selecting the Data that is going to be used
+
+Select Location, date, total_cases, new_cases, total_deaths, population
+from PortfolioProject.dbo.CovidDeaths
+Where continent is not null
+Order by 1,2
+
+-- Looking at the Total Cases vs Total Deaths
+-- Shows the likelihood of dying if you contract in the UK
+
+Select Location, date, total_cases, total_deaths, (total_deaths/total_cases)*100 as DeathPercentage
+from PortfolioProject.dbo.CovidDeaths
+Where Location like '%Kingdom%'
+and continent is not null
+Order by 1,2
+
+-- Looking at the Total Cases vs Population
+-- Shows the percentage of the total population that has contracted Covid
+
+Select Location, date, total_cases, population, (total_cases/population)*100 as CasesByPopulation
+from PortfolioProject.dbo.CovidDeaths
+Where Location like '%Kingdom%'
+and continent is not null
+Order by 1,2
+
+-- Looking at Countries with the Highest Infection Rate compared to Populaton
+
+Select Location, population, MAX(total_cases) as HighestInfectionCount, MAX((total_cases/population))*100 as MaxInfectionPercentage
+from PortfolioProject.dbo.CovidDeaths
+Where continent is not null
+Group by Location, population
+Order by MaxInfectionPercentage DESC
+
+
+-- Showing the Countries with the Highest Death Count per Population
+
+Select Location, Max(cast(total_deaths as int)) as TotalDeathCount
+from PortfolioProject.dbo.CovidDeaths
+Where continent is not null
+Group by Location
+Order by TotalDeathCount DESC
+
+
+-- Breaking it down by Continent
+-- Showing the contients with the highest Death Count by Population
+
+Select continent, Max(cast(total_deaths as int)) as TotalDeathCount
+from PortfolioProject.dbo.CovidDeaths
+Where continent is not null
+Group by continent
+Order by TotalDeathCount DESC
+
+
+-- Global Numbers
+-- Total Global Death Percentage
+
+Select SUM(new_cases) as TotalCases, sum(cast(new_deaths as int)) as TotalDeaths, sum(cast(new_deaths as int))/sum(new_cases)*100 as DeathPercentage
+from PortfolioProject.dbo.CovidDeaths
+Where continent is not null
+Order by 1,2
+
+
+-- Global Death Percentage by Date
+
+Select date, SUM(new_cases) as TotalCases, sum(cast(new_deaths as int)) as TotalDeaths, sum(cast(new_deaths as int))/sum(new_cases)*100 as DeathPercentage
+from PortfolioProject.dbo.CovidDeaths
+Where continent is not null
+Group by date
+Order by 1,2
+
+
+
+
+-- Looking at Total Population vs Vacinations with rolling count
+
+Select dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations
+, sum(Convert(int, vac.new_vaccinations)) over (partition by dea.location order by dea.location, dea.date) as RollingVaccinations
+From PortfolioProject.dbo.CovidDeaths As Dea
+Join PortfolioProject.dbo.CovidVaccinations As Vac
+	On Dea.location = vac.location
+	and dea.date = vac.date
+where dea.continent is not null
+order by 2,3
+
+
+-- Using CTE for Population vs Vacinations with Rolling Count and Percentage of Population Vaccinated per country
+
+With PopvsVac (Continent, Location, Date, Population, New_Vaccinations, RollingVaccinations)
+as
+(
+Select dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations
+, sum(cast(vac.new_vaccinations as int)) over (partition by dea.location order by dea.location,
+dea.date) as RollingVaccinations
+From PortfolioProject.dbo.CovidDeaths As Dea
+Join PortfolioProject.dbo.CovidVaccinations As Vac
+	On Dea.location = vac.location
+	and dea.date = vac.date
+where dea.continent is not null
+)
+Select *, (RollingVaccinations/Population)*100 as PercentageVaccinated
+From PopvsVac
+
+
+-- TEMP Table
+
+DROP Table if exists #temp_PopvsVac
+Create Table #temp_PopvsVac
+(
+Continent nvarchar(255),
+Location nvarchar(255),
+Date datetime,
+Population numeric,
+New_Vaccinations numeric,
+RollingVaccinations numeric
+)
+Insert Into #temp_PopvsVac
+Select dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations
+, sum(Convert(numeric, vac.new_vaccinations)) over (partition by dea.location order by dea.location,
+dea.date) as RollingVaccinations
+From PortfolioProject.dbo.CovidDeaths As Dea
+Join PortfolioProject.dbo.CovidVaccinations As Vac
+	On Dea.location = vac.location
+	and dea.date = vac.date
+where dea.continent is not null
+
+Select *, (RollingVaccinations/population)*100 as PercentageVaccinated
+From #temp_PopvsVac
+
+
+-- Creating View to store data for visualisations
+
+Create View PercentPopulationVaccinated as
+Select dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations
+, sum(Convert(numeric, vac.new_vaccinations)) over (partition by dea.location order by dea.location,
+dea.date) as RollingVaccinations
+From PortfolioProject.dbo.CovidDeaths As Dea
+Join PortfolioProject.dbo.CovidVaccinations As Vac
+	On Dea.location = vac.location
+	and dea.date = vac.date
+where dea.continent is not null
+
+Select *
+From PercentPopulationVaccinated
