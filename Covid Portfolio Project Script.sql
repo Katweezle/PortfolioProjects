@@ -1,9 +1,17 @@
+/*
+Covid 19 Data Exploration
+
+Skills used: Removing Data, Joins, CTE's, Temp Tables, Windows Functions, Aggregate Functions, Creating Views, Converting Views, Converting Data Types
+
+*/
+
 select *
 From PortfolioProject.dbo.CovidDeaths
 Where continent is not null
 Order by 3,4
 
 -- Removing unwanted data from Tables
+
 Select *
 FROM PortfolioProject.dbo.CovidDeaths
 Where Location like '%income%'
@@ -12,13 +20,14 @@ Select *
 FROM PortfolioProject.dbo.CovidVaccinations
 Where Location like '%income%'
 
+
 -- Delete Following Checks
+
 Delete FROM PortfolioProject.dbo.CovidDeaths
 Where Location like '%income%'
 
 Delete FROM PortfolioProject.dbo.CovidVaccinations
 Where Location like '%income%'
-
 
 
 --Selecting the Data that is going to be used
@@ -29,7 +38,7 @@ Where continent is not null
 Order by 1,2
 
 -- Looking at the Total Cases vs Total Deaths
--- Shows the likelihood of dying if you contract in the UK
+-- Shows the likelihood of dying if you contract covid in the UK
 
 Select Location, date, total_cases, total_deaths, (total_deaths/total_cases)*100 as DeathPercentage
 from PortfolioProject.dbo.CovidDeaths
@@ -38,7 +47,7 @@ and continent is not null
 Order by 1,2
 
 -- Looking at the Total Cases vs Population
--- Shows the percentage of the total population that has contracted Covid
+-- Shows the percentage of the total population that has been infected with Covid
 
 Select Location, date, total_cases, population, (total_cases/population)*100 as CasesByPopulation
 from PortfolioProject.dbo.CovidDeaths
@@ -90,8 +99,6 @@ from PortfolioProject.dbo.CovidDeaths
 Where continent is not null
 Group by date
 Order by 1,2
-
-
 
 
 -- Looking at Total Population vs Vacinations with rolling count
